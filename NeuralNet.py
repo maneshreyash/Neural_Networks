@@ -42,7 +42,7 @@ class NeuralNet:
         #
         input_layer_size = len(self.X[0])
         if not isinstance(self.y[0], np.ndarray):
-            output_layer_size = 4
+            output_layer_size = 1
         else:
             output_layer_size = len(self.y[0])
 
@@ -97,17 +97,18 @@ class NeuralNet:
             self.__tanh_derivative(self, x)
 
     def __tanh(self, x):
-        return (np.exp(x) - np.exp(-x)) / (np.exp(x + np.exp(-x)))
+        # return (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
+        return -1 + (2 * self.__sigmoid(2 * x))
 
     def __tanh_derivative(self, x):
-        return 1 - (np.square(x))
+        # return 1 - (np.square(x))
+        return 1 - ((self.__tanh(x)) * self.__tanh(x))
 
 
 
 
 
-
-    # relu activation, relu and dervative function
+    # relu activation, relu and derivative function
 
     def __activation(self, x, activation="relu"):
         if activation == "relu":
@@ -132,11 +133,13 @@ class NeuralNet:
 
     # Below is the training function
 
-    def train(self, max_iterations = 1000, learning_rate = 0.05):
+    def train(self, max_iterations = 1000, learning_rate = 0.05, activation = "sigmoid"):
+        # print (self.w01)
+        print (activation)
         for iteration in range(max_iterations):
-            out = self.forward_pass()
+            out = self.forward_pass(activation)
             error = 0.5 * np.power((out - self.y), 2)
-            self.backward_pass(out)
+            self.backward_pass(out, activation)
             update_layer2 = learning_rate * self.X23.T.dot(self.deltaOut)
             update_layer1 = learning_rate * self.X12.T.dot(self.delta23)
             update_input = learning_rate * self.X01.T.dot(self.delta12)
@@ -145,69 +148,108 @@ class NeuralNet:
             self.w12 += update_layer1
             self.w01 += update_input
 
-        print("After " + str(max_iterations) + " iterations, the total error is " + str(np.sum(error)))
-        print("The final weight vectors are (starting from input to output layers)")
-        print(self.w01)
-        print(self.w12)
-        print(self.w23)
+        # print("After " + str(max_iterations) + " iterations, the total error is " + str(np.sum(error)))
+        # print("The final weight vectors are (starting from input to output layers)")
+        # print(out)
+        # print(self.w01)
+        # print(self.w12)
+        # print(self.w23)
 
-    def forward_pass(self):
+    def forward_pass(self, activation):
         # pass our inputs through our neural network
+
+        # for input layer
         in1 = np.dot(self.X, self.w01)
-        self.X12 = self.__sigmoid(in1)
+        if activation == "sigmoid":
+            self.X12 = self.__sigmoid(in1)
+        elif activation == "tanh":
+            self.X12 = self.__tanh(in1)
+        elif activation == "relu":
+            self.X12 = self.__relu(in1)
+
+        # for hidden layer 1
         in2 = np.dot(self.X12, self.w12)
-        self.X23 = self.__sigmoid(in2)
+        if activation == "sigmoid":
+            self.X23 = self.__sigmoid(in2)
+        elif activation == "tanh":
+            self.X23 = self.__tanh(in2)
+        elif activation == "relu":
+            self.X23 = self.__relu(in2)
+
+        # for hidden layer 2
         in3 = np.dot(self.X23, self.w23)
-        out = self.__sigmoid(in3)
+        out = 0
+        if activation == "sigmoid":
+            out = self.__sigmoid(in3)
+        elif activation == "tanh":
+            out = self.__tanh(in3)
+        elif activation == "relu":
+            out = self.__relu(in3)
+
         return out
 
-    def backward_pass(self, out):
+    def backward_pass(self, out, activation):
         # pass our inputs through our neural network
-        self.compute_output_delta(out, activation="sigmoid")
-        self.compute_hidden_layer2_delta(activation="tanh")
-        self.compute_hidden_layer1_delta(activation="relu")
+        self.compute_output_delta(out, activation)
+        self.compute_hidden_layer2_delta(activation)
+        self.compute_hidden_layer1_delta(activation)
 
-
-
-    # TODO: Implement other activation functions
-
-    def compute_output_delta(self, out, activation="sigmoid"):
+    def compute_output_delta(self, out, activation):
         if activation == "sigmoid":
             delta_output = (self.y - out) * (self.__sigmoid_derivative(out))
+            self.deltaOut = delta_output
+        elif activation == "tanh":
+            delta_output = (self.y - out) * (self.__tanh_derivative(out))
+            self.deltaOut = delta_output
+        elif activation == "relu":
+            delta_output = (self.y - out) * (self.__relu_derivative(out))
+            self.deltaOut = delta_output
 
-        self.deltaOut = delta_output
-
-    # TODO: Implement other activation functions
-
-    def compute_hidden_layer2_delta(self, activation="tanh"):
-        if activation == "tanh":
+    def compute_hidden_layer2_delta(self, activation):
+        if activation == "sigmoid":
+            delta_hidden_layer2 = (self.deltaOut.dot(self.w23.T)) * (self.__sigmoid_derivative(self.X23))
+            self.delta23 = delta_hidden_layer2
+        elif activation == "tanh":
             delta_hidden_layer2 = (self.deltaOut.dot(self.w23.T)) * (self.__tanh_derivative(self.X23))
+            self.delta23 = delta_hidden_layer2
+        elif activation == "relu":
+            delta_hidden_layer2 = (self.deltaOut.dot(self.w23.T)) * (self.__relu_derivative(self.X23))
+            self.delta23 = delta_hidden_layer2
 
-        self.delta23 = delta_hidden_layer2
+    def compute_hidden_layer1_delta(self, activation):
 
-    # TODO: Implement other activation functions
-
-    def compute_hidden_layer1_delta(self, activation="relu"):
-        if activation == "relu":
+        if activation == "sigmoid":
+            delta_hidden_layer1 = (self.delta23.dot(self.w12.T)) * (self.__sigmoid_derivative(self.X12))
+            self.delta12 = delta_hidden_layer1
+        elif activation == "tanh":
+            delta_hidden_layer1 = (self.delta23.dot(self.w12.T)) * (self.__tanh_derivative(self.X12))
+            self.delta12 = delta_hidden_layer1
+        elif activation == "relu":
             delta_hidden_layer1 = (self.delta23.dot(self.w12.T)) * (self.__relu_derivative(self.X12))
-
             self.delta12 = delta_hidden_layer1
 
-    # TODO: Implement other activation functions
-
     def compute_input_layer_delta(self, activation="sigmoid"):
+
         if activation == "sigmoid":
             delta_input_layer = np.multiply(self.__sigmoid_derivative(self.X01), self.delta01.dot(self.w01.T))
-
+            self.delta01 = delta_input_layer
+        elif activation == "tanh":
+            delta_input_layer = np.multiply(self.__tanh_derivative(self.X01), self.delta01.dot(self.w01.T))
+            self.delta01 = delta_input_layer
+        elif activation == "relu":
+            delta_input_layer = np.multiply(self.__relu_derivative(self.X01), self.delta01.dot(self.w01.T))
             self.delta01 = delta_input_layer
 
+    def predict(self, test, activation, header = True):
 
-
-    # TODO: Implement the predict function for applying the trained model on the  test dataset.
-    # You can assume that the test dataset has the same format as the training dataset
-    # You have to output the test error from this function
-
-    def predict(self, test, header = True):
+        self.X = test.iloc[:, 0: 14].values
+        self.y = test.iloc[:, 14].values
+        out = self.forward_pass(activation)
+        test_error = (0.5 * (np.power((out - self.y), 2)))
+        # print test_error
+        test_error = np.sum(test_error)
+        print ("\n")
+        print(test_error)
         return 0
 
 
@@ -216,11 +258,12 @@ def preprocess(in_data):
     df = pd.read_csv(in_data, delimiter=' *, *', engine='python')
     # Detecting the missing values which are marked as '?' and replacing with 'nan'
     df = df.where(df != '?', np.NaN)
+    df = df.where(df != '<=50K.', '<=50K')
+    df = df.where(df != '>50K.', '>50K')
     # Dropping the 'nan' i.e. missing values
     df = df.dropna()
     # using Label Encoder to convert categorical data into numerical data fit for the Regression model
     lb_make = LabelEncoder()
-    # print(df.iloc[:, 1])
     # Selecting the variables which have categorical values
     columns = [1, 3, 5, 6, 7, 8, 9, 13, 14]
     for i in columns:
@@ -229,20 +272,18 @@ def preprocess(in_data):
     for i in range(0, 15):
         df.iloc[:, i] = pd.to_numeric(df.iloc[:, i])
     # Converting the panda DataFrame to a numpy MultiDimensional Array
-    # dat = df.values
     return df
 
 
 if __name__ == "__main__":
+
     dataset = 'Adult_census_income.csv'
-    # print(dataset)
     data = preprocess(dataset)
     data = data.sample(frac=1).reset_index(drop=True)
     split = int(len(data) * .8)
     train_data = data.iloc[0:split, :]
     test_data = data.iloc[split:, :]
-    # print(training)
     neural_network = NeuralNet(train_data)
-    neural_network.train()
-    testError = neural_network.predict(test_data)
-
+    activation = "tanh"
+    neural_network.train(1000, 0.05, activation)
+    testError = neural_network.predict(test_data, activation)
