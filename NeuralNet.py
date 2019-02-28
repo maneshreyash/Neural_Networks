@@ -15,8 +15,6 @@
 #   w12, delat12, X12 - weights, updates and outputs for connection from layer 1 (first hidden) to layer 2 (second hidden)
 #   w23, delta23, X23 - weights, updates and outputs for connection from layer 2 (second hidden) to layer 3 (output layer)
 #
-#   You need to complete all TODO marked sections
-#   You are free to modify this code in any way you want, but need to mention it in the README file.
 #
 #####################################################################################################################
 
@@ -134,8 +132,7 @@ class NeuralNet:
     # Below is the training function
 
     def train(self, max_iterations = 1000, learning_rate = 0.05, activation = "sigmoid"):
-        # print (self.w01)
-        print (activation)
+        print ("The activation function used is: " + activation)
         for iteration in range(max_iterations):
             out = self.forward_pass(activation)
             error = 0.5 * np.power((out - self.y), 2)
@@ -148,12 +145,11 @@ class NeuralNet:
             self.w12 += update_layer1
             self.w01 += update_input
 
-        # print("After " + str(max_iterations) + " iterations, the total error is " + str(np.sum(error)))
-        # print("The final weight vectors are (starting from input to output layers)")
-        # print(out)
-        # print(self.w01)
-        # print(self.w12)
-        # print(self.w23)
+        print("After " + str(max_iterations) + " iterations, the total error is " + str(np.sum(error)))
+        print("The final weight vectors are (starting from input to output layers)")
+        print(self.w01)
+        print(self.w12)
+        print(self.w23)
 
     def forward_pass(self, activation):
         # pass our inputs through our neural network
@@ -246,11 +242,8 @@ class NeuralNet:
         self.y = test.iloc[:, 14].values
         out = self.forward_pass(activation)
         test_error = (0.5 * (np.power((out - self.y), 2)))
-        # print test_error
         test_error = np.sum(test_error)
-        print ("\n")
-        print(test_error)
-        return 0
+        return test_error
 
 
 def preprocess(in_data):
@@ -284,6 +277,8 @@ if __name__ == "__main__":
     train_data = data.iloc[0:split, :]
     test_data = data.iloc[split:, :]
     neural_network = NeuralNet(train_data)
-    activation = "tanh"
-    neural_network.train(1000, 0.05, activation)
+    activation = "relu"
+    neural_network.train(2000, 0.05, activation)
     testError = neural_network.predict(test_data, activation)
+    print ("\n")
+    print ("The test error for the split is: " + str(testError))
